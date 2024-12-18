@@ -1,51 +1,90 @@
 import streamlit as st
-import requests
 from openai import AzureOpenAI
+import os
+from datetime import datetime
 
-# Azure AI configuration
-AZURE_API_KEY = "CUCezjchUShB635Ua3YGnJNwScJE3vIGE7yg6qPOZw8JJ0DldvDaJQQJ99ALACYeBjFXJ3w3AAABACOGH3Ff"
-AZURE_ENDPOINT = "https://genaisistopenai.openai.azure.com/"
+# Set up environment variables
+os.environ["AZURE_API_KEY"] = "CUCezjchUShB635Ua3YGnJNwScJE3vIGE7yg6qPOZw8JJ0DldvDaJQQJ99ALACYeBjFXJ3w3AAABACOGH3Ff"
+os.environ["AZURE_API_ENDPOINT"] = "https://genaisistopenai.openai.azure.com/"
 
-def analyze_text_with_azure(text):
-    # Azure Text Analytics endpoint
-    url = f"{AZURE_ENDPOINT}/text/analytics/v3.0/sentiment"
-    
-    # Prepare the request payload
-    headers = {"Ocp-Apim-Subscription-Key": AZURE_API_KEY}
-    data = {"documents": [{"id": "1", "language": "en", "text": text}]}
-    
-    # Call Azure AI
-    response = requests.post(url, headers=headers, json=data)
-    return response.json()
+# Initialize AzureOpenAI client
+client = AzureOpenAI(
+    api_key="CUCezjchUShB635Ua3YGnJNwScJE3vIGE7yg6qPOZw8JJ0DldvDaJQQJ99ALACYeBjFXJ3w3AAABACOGH3Ff",
+    api_version="2024-02-01",
+    azure_endpoint="https://genaisistopenai.openai.azure.com/"
+)
 
-# Streamlit app UI
-st.title("Productivity Insight")
-st.subheader("Analyze text and gain insights with Azure AI")
+deployment_name = 'gpt-35-turbo'  # Replace with your actual deployment name
 
-# Input text from user
-user_input = st.text_area("Enter text to analyze:")
+# Initialize chat history
+if "messages" not in st.session_state:
+    st.session_state["messages"] = []
 
-if st.button("Analyze"):
-    if user_input:
-        result = analyze_text_with_azure(user_input)
-        
-        # Extracting sentiment and confidence scores
-        if 'documents' in result and result['documents']:
-            sentiment = result['documents'][0]['sentiment']
-            confidence_scores = result['documents'][0]['confidenceScores']
-            
-            # Display results
-            st.success("Analysis Result")
-            st.text_area(
-                label="Sentiment Analysis",
-                value=f"Sentiment: {sentiment.capitalize()}\n"
-                      f"Confidence Scores:\n"
-                      f"  Positive: {confidence_scores['positive']:.2f}\n"
-                      f"  Neutral: {confidence_scores['neutral']:.2f}\n"
-                      f"  Negative: {confidence_scores['negative']:.2f}",
-                height=150
+# Streamlit App
+st.set_page_config(page_title="Chat with Azure OpenAI", layout="wide")
+st.title("Chat with Azure OpenAI")
+st.markdown("""<style>
+    .chat-container {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .chat-bubble {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 10px;
+        max-width: 70%;
+    }
+    .chat-user {
+        background-color: #d1e7ff;
+        align-self: flex-end;
+        margin-left: auto;
+    }
+    .chat-bot {
+        background-color: #f1f0f0;
+        align-self: flex-start;
+        margin-right: auto;
+    }
+</style>""", unsafe_allow_html=True)
+
+# Input container
+with st.container():
+    st.subheader("Chat")
+    user_input = st.text_input("You:", "", key="input_box", placeholder="Type your message here...")
+    if st.button("Send") and user_input.strip():
+        # Append user message to chat history
+        st.session_state["messages"].append({"sender": "user", "text": user_input.strip(), "time": datetime.now()})
+
+        try:
+            # Call AzureOpenAI API for a response
+            response = client.completions.create(
+                model=deployment_name,
+                prompt=user_input,
+                max_tokens=150
             )
-        else:
-            st.error("Could not analyze the text. Please try again.")
-    else:
-        st.warning("Please enter some text!")
+            bot_response = response.choices[0].text.strip()
+        except Exception as e:
+            bot_response = f"An error occurred: {e}"
+
+        # Append bot response to chat history
+        st.session_state["messages"].append({"sender": "bot", "text": bot_response, "time": datetime.now()})
+
+# Chat history display
+with st.container():
+    st.markdown("### Conversation")
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+    for message in st.session_state["messages"]:
+        sender_class = "chat-user" if message["sender"] == "user" else "chat-bot"
+        st.markdown(
+            f'<div class="chat-bubble {sender_class}">'
+            f'<strong>{"You" if message["sender"] == "user" else "Azure AI"}</strong>: {message["text"]}'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Scroll to the bottom of the chat automatically
+st.markdown("<script>window.scrollTo(0, document.body.scrollHeight);</script>", unsafe_allow_html=True)
