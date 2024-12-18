@@ -9,12 +9,12 @@ os.environ["AZURE_API_ENDPOINT"] = "https://genaisistopenai.openai.azure.com/"
 
 # Initialize AzureOpenAI client
 client = AzureOpenAI(
-    api_key=os.getenv("AZURE_API_KEY"),
-    api_version="2024-02-01",
-    azure_endpoint=os.getenv("AZURE_API_ENDPOINT")
+    api_key="CUCezjchUShB635Ua3YGnJNwScJE3vIGE7yg6qPOZw8JJ0DldvDaJQQJ99ALACYeBjFXJ3w3AAABACOGH3Ff",
+    api_version="2023-12-01-preview",
+    azure_endpoint="https://genaisistopenai.openai.azure.com/"
 )
 
-deployment_name = 'gpt-35-turbo'  # Replace with your actual deployment name
+deployment_name = 'gpt-4o'  # Replace with your actual deployment name
 
 # Initialize chat history
 if "messages" not in st.session_state:
@@ -94,12 +94,17 @@ with st.container():
 
         try:
             # Call AzureOpenAI API for a response
-            response = client.completions.create(
+            user_data = "You are a helpful assistant."
+            user_query = user_input.strip()
+            response = client.chat.completions.create(
                 model=deployment_name,
-                prompt=user_input,
-                max_tokens=150
+                messages=[
+                    { "role": "system", "content": user_data },
+                    { "role": "user", "content": user_query }
+                ],
+                max_tokens=2000
             )
-            bot_response = response.choices[0].text.strip()
+            bot_response = response.choices[0].message.content
         except Exception as e:
             bot_response = f"An error occurred: {e}"
 
