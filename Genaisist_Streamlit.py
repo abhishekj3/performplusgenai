@@ -23,6 +23,7 @@ if "messages" not in st.session_state:
 # Streamlit App
 st.set_page_config(page_title="Chat with Azure OpenAI", layout="wide")
 st.title("InsightBuddy: Productivity Insights from JIRA")
+
 st.markdown("""<style>
     .chat-container {
         max-height: 500px;
@@ -56,16 +57,8 @@ st.markdown("""<style>
         margin-right: auto;
         animation: fadeIn 0.3s ease-in-out;
     }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    .input-container {
-        margin-top: 20px;
-        text-align: center;
-    }
-    .send-button {
-        background-color: #0078d7;
+    .clear-button {
+        background-color: #d9534f;
         color: white;
         border: none;
         padding: 10px 20px;
@@ -74,19 +67,27 @@ st.markdown("""<style>
         cursor: pointer;
         transition: background-color 0.2s;
     }
-    .send-button:hover {
-        background-color: #005a9e;
+    .clear-button:hover {
+        background-color: #c9302c;
     }
 </style>""", unsafe_allow_html=True)
 
 # Input container
 with st.container():
     st.subheader("Chat")
+    col1, col2 = st.columns([0.8, 0.2])
+
+    # Form for sending messages
     with st.form(key="chat_form", clear_on_submit=True):
         user_input = st.text_input(
             "You:", key="input_box", placeholder="Type your message here...", label_visibility="collapsed"
         )
         submit_button = st.form_submit_button("Send", help="Click to send your message")
+
+    # Clear chat button
+    if col2.button("Clear Chat", help="Click to clear chat history"):
+        st.session_state["messages"] = []  # Reset the messages
+        st.rerun()  # Proper rerun method in the latest Streamlit version
 
     if submit_button and user_input.strip():
         # Append user message to chat history
